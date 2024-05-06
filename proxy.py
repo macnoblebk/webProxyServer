@@ -40,6 +40,7 @@ def parse_url(url):
     path = parsed_url.path
     return host, port, path
 
+
 def cache_file(url, data):
     """
         Caches the HTTP response data to a file (cache/host/port/path).
@@ -52,3 +53,19 @@ def cache_file(url, data):
     cache_folder.parent.mkdir(parents=True, exist_ok=True)
     with open(cache_folder, "wb") as f:
         f.write(data)
+
+
+def get_file_from_cache(url):
+    """
+       Retrieves data from the cache (cache/host/port/path).
+       Args:
+           url (str): The URL of the cached data.
+       Returns:
+           str or None: The cached data if found, else None.
+    """
+    parsed_url = urlparse(url)
+    cache_folder = Path(CACHE_FOLDER) / parsed_url.hostname / str(parsed_url.port) / parsed_url.path[1:]
+    if cache_folder.exists():
+        with open(cache_folder, "rb") as f:
+            return f.read().decode()
+    return None
