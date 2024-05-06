@@ -152,3 +152,21 @@ def handle_request(client_socket, request):
     print("Now responding to the client...")
     print("All done! Closing socket...")
     client_socket.close()  # Close the client socket after handling the request
+
+
+def proxy_server(port):
+    """
+        Starts the proxy server.
+        Args:
+            port (int): The port number to listen on.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind(("", port))
+        server_socket.listen(1)
+        while True:
+            print("\n******************** Ready to serve ********************")
+            client_socket, client_address = server_socket.accept()
+            print("Received a client connection from", client_address)
+            request = client_socket.recv(BUFFER_SIZE)
+            print("Received a message from this client:", request)
+            handle_request(client_socket, request.decode())
