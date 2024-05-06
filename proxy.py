@@ -69,3 +69,86 @@ def get_file_from_cache(url):
         with open(cache_folder, "rb") as f:
             return f.read().decode()
     return None
+
+
+def handle_request(client_socket, request):
+    """
+        Handles incoming client requests.
+        Args:
+            client_socket (socket): The client socket.
+            request (str): The HTTP request string.
+    """
+    method, url, version = parse_request(request)
+
+    if not url:
+        client_socket.sendall(b"HTTP/1.1 500 Internal Server Error\r\n\r\n")
+        return
+
+    host, port, path = parse_url(url)
+    cached_response = get_file_from_cache(url)
+
+    if cached_response:
+        # If the response is cached, serve it from the cache
+        print("Yay! The requested file is in the cache...")
+        headers, _, body = cached_response.partition("\r\n\r\n")
+        client_socket.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: %d\r\nConnection: close\r\nCache-Hit: 1\r\n\r\n"
+                              % (len(body)))
+        client_socket.sendall(body.encode())
+
+    else:
+        # If not cached, forward the request to the origin server
+        print("Oops! No cache hit! Requesting origin server for the file...")
+        print("Sending the following message to proxy to server:")
+        print(f"{method} {path} {version}\nhost: {host}\nConnection:close")
+
+        try:
+            remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            remote_socket.connect((host, port))
+            remote_socket.sendall(f"GET {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n".encode())
+            response = b""
+
+            # Receive the response from the origin server
+            while True:
+                data = remote_socket.recv(BUFFER_SIZE)
+                if not data:
+                    break
+                response += data
+            status_code = int(response.split(b" ")[1])
+
+            if status_code == STATUS_CODE_200_OK:
+                # If response status is 200, cache response
+                print("Response received from server, and status code is 200! Write to cache, save time next time...")
+                headers, sep, body = response.partition(b"\r\n\r\n")
+                modified_headers = headers + b"\r\nCache-Hit: 0"
+                client_socket.sendall(modified_headers + sep + body)
+                cache_file(url, response)
+
+            elif status_code == STATUS_CODE_404_NOT_FOUND:
+                # If response status is 404, return it without caching
+                print("Response received from server, but status code is not 200! No cache writing...")
+                headers, sep, body = response.partition(b"\r\n\r\n")
+                modified_headers = headers + b"\r\nCache-Hit: 0"
+                client_socket.sendall(modified_headers + sep + body)
+
+            else:
+                # For other status codes, return 500 Internal Server Error
+                headers, _, _ = response.partition(b"\r\n\r\n")
+                _, *response_headers = headers.split(b"\r\n")
+                header_dict = {k: v for k, v in
+                               (header.split(b": ", maxsplit=1) for header in response_headers)}
+                date = header_dict.get(b"Date")
+                content_type = header_dict.get(b"Content-Type")
+                connection = header_dict.get(b"Connection")
+                client_socket.sendall(
+                    b"HTTP/1.1 500 Internal Server Error\r\nCache-Hit: 0\r\nDate: %s\r\nContent-Length: "
+                    b"0\r\nContent-Type:%s\r\nConnection: %s\r\n\r\n"
+                    % (date, content_type, connection))
+
+        except Exception as e:
+            print("Error connecting to origin server:", e)
+
+        finally:
+            remote_socket.close()
+    print("Now responding to the client...")
+    print("All done! Closing socket...")
+    client_socket.close()  # Close the client socket after handling the request
