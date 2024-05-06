@@ -24,3 +24,18 @@ def parse_request(request):
     if method != "GET" or version != "HTTP/1.1":
         raise ValueError("Malformed request! Usage: GET <URL> HTTP/1.1")
     return method, url, version
+
+
+def parse_url(url):
+    """
+        Parses the URL and extracts host, port, and path.
+        Args:
+            url (str): The URL to parse.
+        Returns:
+            tuple: A tuple containing host, port, and path.
+    """
+    parsed_url = urlparse(url)
+    host = parsed_url.hostname
+    port = parsed_url.port or DEFAULT_HTTP_PORT
+    path = parsed_url.path
+    return host, port, path
