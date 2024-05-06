@@ -170,3 +170,12 @@ def proxy_server(port):
             request = client_socket.recv(BUFFER_SIZE)
             print("Received a message from this client:", request)
             handle_request(client_socket, request.decode())
+
+
+# Main function
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python3 proxy.py <port>")
+        sys.exit(1)
+    port = int(sys.argv[1])
+    proxy_server(port)
