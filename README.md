@@ -8,6 +8,13 @@ the cache if available. If not, it forwards the request to the origin server, ca
 client. Implemented functionalities include parsing HTTP requests, caching responses, handling various HTTP status 
 codes, and managing concurrent client connections.
 
+#### Program Output
+##### Client 
+![Screenshot of client program output](client%20output1.png)
+![Screenshot of client program output](client%20output2.png)
+##### Server
+![Screenshot of server program output](proxy%20output.png)
+
 ### Technologies and Skills
 - Programming Languages: Python
 - Libraries/Modules: Socket programming, urllib.parse, pathlib
